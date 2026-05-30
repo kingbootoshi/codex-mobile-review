@@ -13,7 +13,7 @@ set -euo pipefail
 
 MINI="${MINI:-mini}"
 TS_PORT="${TS_PORT:-7443}"
-TS_HOST="${TS_HOST:?set TS_HOST to your host's tailnet MagicDNS name, e.g. my-host.tailXXXX.ts.net}"
+TS_HOST="${TS_HOST:?set TS_HOST to the host tailnet MagicDNS name, e.g. my-host.tailXXXX.ts.net}"
 PUBLIC_URL="https://${TS_HOST}:${TS_PORT}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
