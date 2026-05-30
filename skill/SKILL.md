@@ -44,18 +44,22 @@ Show him both ways to open it, then say you are waiting:
 
 Example line: "Review ready — scan the QR above or tap `<REVIEW_URL>`. Swipe right to approve, left to flag and type what to fix. I'm waiting on your verdict."
 
-### 3. Wait for his verdict (this is how you "background" it)
+### 3. Wait for his verdict
 
-Codex has no job-control / background tasks — a turn runs commands to completion. So you wait by **polling in a re-run loop**, which keeps each command short while Saint takes his time:
+The waiting happens **server-side**: `codex-review wait` opens a long-poll the server holds until Saint submits. You are not spinning the model — the connection just blocks. Pick one of two ways, by whether you have other work to do.
+
+**Default — foreground blocking wait.** Just block on it:
 
 ```bash
 codex-review wait <SESSION_ID> --timeout 300
 ```
 
 - **Exit 0** → it prints the verdict JSON between `===CODEX_REVIEW_VERDICT_BEGIN===` and `===CODEX_REVIEW_VERDICT_END===`. Parse that and go to step 4.
-- **Exit 75** (prints `STATUS=pending`) → Saint hasn't finished yet. Run the **exact same** `wait` command again. Keep re-running until you get exit 0. This is the normal path — re-running is the wait.
+- **Exit 75** (prints `STATUS=pending`) → the 300s elapsed with no verdict yet. Run the **exact same** `wait` command again, and keep re-running until exit 0. Re-running is normal — the server held your place, you lost nothing. Use a short `--timeout` (≤300s) and re-run rather than one huge timeout, because Codex's shell tool kills a wrapped command at its own wrapper timeout; the short-loop survives that.
 
-Do not give up after one timeout. Loop the `wait` until a verdict lands (or until Saint tells you to stop).
+Do not give up after one timeout. Loop until a verdict lands (or Saint says stop).
+
+**If you have other work to do while he reviews — background it.** Codex's background terminals (unified-exec, stable) let you launch `codex-review wait <id>` as a background process, go do other tasks, then reattach / poll it for the verdict. Reach for this only when you genuinely have parallel work; for a plain "wait until he's done," the foreground block above is simpler and cheaper (background polling re-sends the whole history on each check).
 
 ### 4. Act on the verdict
 
