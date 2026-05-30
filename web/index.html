@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#09090D">
+<title>Codex Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--accent:#7C3AED;--accent-l:#8B5CF6;--accent-ll:#A78BFA;--bg:#09090D;--glass:rgba(10,10,15,.5);
+    --txt:rgba(255,255,255,.82);--txt2:rgba(255,255,255,.60);--txt3:rgba(255,255,255,.35);--line:rgba(255,255,255,.15);
+    --green:#34D399;--red:#FB7185;--amber:#FBBF24;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  /* hard scroll-lock: the page itself never moves; only marked containers scroll */
+  html,body{height:100%;height:100dvh;overflow:hidden;overscroll-behavior:none;position:fixed;inset:0;width:100%;
+    -webkit-text-size-adjust:100%;touch-action:manipulation;
+    background:var(--bg);background-image:radial-gradient(ellipse at 50% 0%,#140f20 0%,var(--bg) 50%)}
+  body{font-family:'DM Sans',system-ui,sans-serif;color:var(--txt)}
+  .app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+  /* header — one line: path · model + progress */
+  .head{padding:14px 18px 9px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .head .meta{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono';font-size:12.5px;min-width:0}
+  .head .meta .path{color:var(--txt2);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .head .meta .dot{color:var(--txt3);flex:0 0 auto}.head .meta .model{color:var(--txt3);white-space:nowrap;flex:0 0 auto}
+  .progchip{flex:0 0 auto;font-size:12px;font-weight:600;color:var(--accent-ll);background:rgba(124,58,237,.12);border:.5px solid rgba(139,92,246,.25);padding:7px 12px;border-radius:20px;font-variant-numeric:tabular-nums}
+  /* file rail (horizontal scroll, contained) */
+  .rail{display:flex;gap:7px;padding:6px 18px 12px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .rail::-webkit-scrollbar{display:none}
+  .chipf{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:14px;background:var(--glass);
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:.5px solid var(--line);font-size:11px;font-family:'JetBrains Mono';color:var(--txt3);cursor:pointer;transition:all .2s;white-space:nowrap}
+  .chipf.cur{border-color:var(--accent);color:var(--accent-ll);background:rgba(124,58,237,.12)}
+  .chipf .d{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2)}
+  .chipf.ok .d{background:var(--green)}.chipf.flag .d{background:var(--amber)}
+  .chipf.ok{color:var(--green)}.chipf.flag{color:var(--amber)}
+  /* diff viewer — the only vertically-scrolling surface */
+  .viewer{flex:1;min-height:0;margin:0 14px;border-radius:24px;overflow:hidden;position:relative;background:var(--glass);
+    backdrop-filter:blur(40px) saturate(1.3);-webkit-backdrop-filter:blur(40px) saturate(1.3);border:.5px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+    display:flex;flex-direction:column;touch-action:pan-y}
+  .vhead{padding:15px 18px 12px;border-bottom:.5px solid rgba(255,255,255,.07);display:flex;align-items:flex-start;gap:10px}
+  .vhead .fn{font-family:'JetBrains Mono';font-size:14px;font-weight:600;word-break:break-all;line-height:1.3;flex:1;min-width:0}
+  .vhead .st{display:flex;gap:10px;font-family:'JetBrains Mono';font-size:12px;margin-top:5px}
+  .add{color:var(--green);font-weight:600}.del{color:var(--red);font-weight:600}
+  .vbadge{font-size:10px;font-weight:600;padding:4px 9px;border-radius:18px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .vbadge.pending{color:var(--txt3);background:rgba(255,255,255,.05);border:.5px solid var(--line)}
+  .vbadge.ok{color:var(--green);background:rgba(52,211,153,.12);border:.5px solid rgba(52,211,153,.3)}
+  .vbadge.flag{color:var(--amber);background:rgba(251,191,36,.12);border:.5px solid rgba(251,191,36,.3)}
+  .code{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 0;font-family:'JetBrains Mono';font-size:12px;line-height:1.7;-webkit-overflow-scrolling:touch}
+  .code::-webkit-scrollbar{width:0}
+  .hunk{color:var(--accent-ll);background:rgba(124,58,237,.08);padding:4px 16px;margin:6px 0;font-size:11px;white-space:pre-wrap;word-break:break-all}
+  .ln{display:flex;padding:0 16px;white-space:pre-wrap;word-break:break-word}
+  .ln .g{color:var(--txt3);width:34px;flex:0 0 34px;text-align:right;padding-right:10px;-webkit-user-select:none;user-select:none}
+  .ln.plus{background:rgba(52,211,153,.10)}.ln.plus .c{color:#86efac}
+  .ln.minus{background:rgba(251,113,133,.10)}.ln.minus .c{color:#fca5b5}.ln .c{flex:1;min-width:0}
+  .note-strip{padding:10px 16px;background:rgba(251,191,36,.08);border-top:.5px solid rgba(251,191,36,.2);font-size:12px;color:var(--amber);display:none;align-items:flex-start;gap:8px}
+  .note-strip.on{display:flex}
+  /* page-nav footer INSIDE the viewer */
+  .vnav{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-top:.5px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)}
+  .vnav button{width:44px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--txt2);background:rgba(255,255,255,.05);border:.5px solid var(--line);cursor:pointer;transition:transform .14s}
+  .vnav button:active{transform:scale(.9)}.vnav button.hide{opacity:.25;pointer-events:none}
+  .vnav button svg{width:18px;height:18px}
+  .vnav .counter{font-family:'JetBrains Mono';font-size:12px;color:var(--txt3);font-variant-numeric:tabular-nums}
+  /* swipe overlay */
+  .swipe-fx{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .1s}
+  .swipe-fx.ok{background:radial-gradient(ellipse at 0% 50%,rgba(52,211,153,.2),transparent 55%)}
+  .swipe-fx.no{background:radial-gradient(ellipse at 100% 50%,rgba(251,113,133,.2),transparent 55%)}
+  /* verdict dock — clean Flag / Approve (becomes Send when all reviewed) */
+  .dock{margin:12px 14px calc(14px + env(safe-area-inset-bottom));display:flex;gap:11px}
+  .dbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;padding:17px;border-radius:20px;font-size:15.5px;font-weight:600;cursor:pointer;transition:transform .14s;border:.5px solid transparent;backdrop-filter:blur(30px) saturate(1.3);-webkit-backdrop-filter:blur(30px) saturate(1.3)}
+  .dbtn:active{transform:scale(.96)}
+  .dbtn.flag{color:var(--amber);background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.28)}
+  .dbtn.ok{color:var(--green);background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.28)}
+  .dbtn.send{background:linear-gradient(135deg,var(--accent),var(--accent-l));color:#fff;border:none;font-weight:700;box-shadow:0 12px 32px rgba(124,58,237,.4)}
+  .dbtn svg{width:19px;height:19px}
+  /* flag sheet — manual prompt only */
+  .sheet-wrap{position:fixed;inset:0;z-index:80;display:none}.sheet-wrap.on{display:block}
+  .scrim{position:absolute;inset:0;background:rgba(2,2,4,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;transition:opacity .3s}.sheet-wrap.on .scrim{opacity:1}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:rgba(18,15,29,.92);backdrop-filter:blur(50px) saturate(1.4);-webkit-backdrop-filter:blur(50px) saturate(1.4);border-top:.5px solid var(--line);border-radius:34px 34px 0 0;padding:14px 22px calc(22px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .42s cubic-bezier(.22,1,.36,1)}.sheet-wrap.on .sheet{transform:translateY(0)}
+  .grab{width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.18);margin:2px auto 16px}
+  .sheet h3{font-size:18px;font-weight:600;display:flex;align-items:center;gap:9px}.sheet h3 .ic{color:var(--amber)}
+  .sheet .sub{font-size:13px;color:var(--txt2);margin:6px 0 2px;font-family:'JetBrains Mono';word-break:break-all}.sheet .fn{color:var(--accent-ll)}
+  textarea{width:100%;min-height:104px;margin-top:16px;background:rgba(0,0,0,.3);border:.5px solid var(--line);border-radius:18px;padding:14px 16px;color:var(--txt);font-family:'DM Sans';font-size:16px;resize:none;outline:none;line-height:1.5}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,58,237,.15)}textarea::placeholder{color:var(--txt3)}
+  .sheet-actions{display:flex;gap:12px;margin-top:16px}
+  .btn{flex:1;padding:15px;border-radius:18px;font-size:15px;font-weight:600;cursor:pointer;border:.5px solid var(--line);background:rgba(255,255,255,.04);color:var(--txt2)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-l));color:#fff;border:none;box-shadow:0 8px 24px rgba(124,58,237,.4)}
+  /* done + await + states */
+  .done,.await,.state{position:fixed;inset:0;z-index:70;display:none;flex-direction:column;padding-top:calc(20px + env(safe-area-inset-top));background:radial-gradient(ellipse at 50% 10%,#1a1226 0%,var(--bg) 60%)}
+  .done.on,.await.on,.state.on{display:flex}
+  .done-h{padding:24px;text-align:center}.done-h .big{font-size:26px;font-weight:700;letter-spacing:-.5px}.done-h .small{font-size:14px;color:var(--txt2);margin-top:6px}
+  .summary{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 18px;-webkit-overflow-scrolling:touch}.summary::-webkit-scrollbar{width:0}
+  .grp-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3);margin:14px 6px 8px;font-weight:600}
+  .srow{display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:18px;margin-bottom:8px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:.5px solid var(--line)}
+  .srow .si{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:0 0 30px}
+  .srow.ok .si{background:rgba(52,211,153,.15);color:var(--green)}.srow.flag .si{background:rgba(251,191,36,.15);color:var(--amber)}
+  .srow .f{font-family:'JetBrains Mono';font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .srow .note{font-size:12px;color:var(--txt3);margin-top:3px}.srow.flag .note{color:var(--amber);opacity:.85}
+  .send-dock{padding:16px 20px calc(22px + env(safe-area-inset-bottom));border-top:.5px solid rgba(255,255,255,.07);background:rgba(9,9,13,.6);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px)}
+  .send-btn{width:100%;padding:18px;border-radius:22px;font-size:17px;font-weight:700;border:none;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent-l));color:#fff;box-shadow:0 12px 36px rgba(124,58,237,.45);display:flex;align-items:center;justify-content:center;gap:10px}
+  .send-btn:active{transform:scale(.98)}.send-btn.busy{opacity:.6;pointer-events:none}
+  .back-link{display:block;text-align:center;margin-top:14px;font-size:13px;color:var(--txt3);text-decoration:underline;cursor:pointer}
+  .await{align-items:center;justify-content:center;text-align:center;padding:40px}
+  .orb{width:120px;height:120px;border-radius:50%;margin-bottom:30px;background:radial-gradient(circle at 35% 30%,var(--accent-ll),var(--accent) 50%,#3b1d70);box-shadow:0 0 70px rgba(124,58,237,.6);animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .await h2{font-size:22px;font-weight:700}.await p{font-size:14px;color:var(--txt2);margin-top:10px;max-width:300px;line-height:1.5}
+  .steps{margin-top:30px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px;text-align:left}
+  .step{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--txt3)}.step.active{color:var(--txt)}.step.done{color:var(--green)}
+  .step .sd{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 22px}
+  /* loading / empty / error — always bright, never a black void */
+  .state{align-items:center;justify-content:center;text-align:center;padding:40px}
+  .state .ic{font-size:44px;margin-bottom:16px}
+  .state h2{font-size:21px;font-weight:700}.state p{font-size:13.5px;color:var(--txt2);margin-top:10px;max-width:300px;line-height:1.55;font-family:'JetBrains Mono'}
+  .state p b{color:var(--accent-ll);font-weight:500}
+  .spinner{width:42px;height:42px;border-radius:50%;border:3px solid rgba(124,58,237,.2);border-top-color:var(--accent-ll);animation:spin .8s linear infinite;margin-bottom:20px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .state .retry{margin-top:24px;font-size:14px;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-l));padding:12px 22px;border-radius:18px;border:none;cursor:pointer;box-shadow:0 8px 24px rgba(124,58,237,.4)}
+</style>
+</head>
+<body>
+  <!-- loading (default visible — guarantees something always shows) -->
+  <div class="state on" id="loading"><div class="spinner"></div><h2>Loading session…</h2></div>
+  <!-- empty -->
+  <div class="state" id="empty"><div class="ic">📭</div><h2>No review waiting</h2><p>Run <b>codex-review submit</b> from a repo, then tap refresh.</p><button class="retry" id="emptyRetry">↻ Refresh</button></div>
+  <!-- error -->
+  <div class="state" id="error"><div class="ic">⚠️</div><h2>Couldn't load</h2><p id="errMsg"></p><button class="retry" id="errRetry">↻ Retry</button></div>
+
+  <div class="app" id="appMain" style="display:none">
+    <div class="head">
+      <div class="meta"><span class="path" id="hPath">repo</span><span class="dot" id="hDot">·</span><span class="model" id="hModel">model</span></div>
+      <div class="progchip" id="prog">0/0</div>
+    </div>
+    <div class="rail" id="rail"></div>
+    <div class="viewer" id="viewer">
+      <div class="swipe-fx ok" id="fxOk"></div><div class="swipe-fx no" id="fxNo"></div>
+      <div class="vhead">
+        <div style="flex:1;min-width:0">
+          <div class="fn" id="vFn">file</div>
+          <div class="st"><span class="add" id="vAdd">+0</span><span class="del" id="vDel">−0</span></div>
+        </div>
+        <span class="vbadge pending" id="vBadge">pending</span>
+      </div>
+      <div class="code" id="code"></div>
+      <div class="note-strip" id="noteStrip"><span>&#9873;</span><span id="noteText"></span></div>
+      <div class="vnav">
+        <button id="prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <span class="counter" id="counter">1 / 1</span>
+        <button id="next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+    </div>
+    <div class="dock" id="dock">
+      <div class="dbtn flag" id="flag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Flag</div>
+      <div class="dbtn ok" id="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Approve</div>
+      <button class="dbtn send" id="sendInline" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Review ready · Send</button>
+    </div>
+  </div>
+
+  <!-- flag sheet -->
+  <div class="sheet-wrap" id="sheetWrap"><div class="scrim" id="scrim"></div>
+    <div class="sheet"><div class="grab"></div><h3><span class="ic">&#9873;</span> Flag this file</h3>
+      <div class="sub">what's your problem with <span class="fn" id="sheetFile">file</span>?</div>
+      <textarea id="note" placeholder="tell Codex exactly what to fix…"></textarea>
+      <div class="sheet-actions"><button class="btn" id="cancelFlag">Cancel</button><button class="btn primary" id="saveFlag">Save flag →</button></div>
+    </div>
+  </div>
+
+  <!-- done -->
+  <div class="done" id="done"><div class="done-h"><div class="big">Review ready</div><div class="small" id="doneSummary"></div></div>
+    <div class="summary" id="summary"></div>
+    <div class="send-dock"><button class="send-btn" id="sendBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>Send to Codex</button><span class="back-link" id="backReview">← keep reviewing</span></div>
+  </div>
+
+  <!-- await -->
+  <div class="await" id="await"><div class="orb"></div><h2>Sent to Codex</h2>
+    <p id="awaitMsg">Your verdict is in. Codex picked it up and is reworking the flagged files in the background.</p>
+    <div class="steps"><div class="step done" id="st1"><span class="sd">✓</span> Verdict received</div><div class="step active" id="st2"><span class="sd">2</span> Reworking flagged files</div><div class="step" id="st3"><span class="sd">3</span> Applying your notes</div><div class="step" id="st4"><span class="sd">4</span> New diff incoming</div></div>
+  </div>
+
+<script>
+const $=id=>document.getElementById(id);
+let FILES=[],SESSION=null,SESSION_ID=null,verdicts=[],cur=0;
+function escapeHtml(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+function vtype(v){return v?(typeof v==='object'?v.v:v):null}
+function vnote(v){return(v&&typeof v==='object')?v.note:null}
+function shortRepo(p){return String(p||'repo').replace(/^\/Users\/[^/]+/,'~').replace(/^\/home\/[^/]+/,'~')}
+
+const pm=location.pathname.match(/^\/s\/([A-Za-z0-9]+)/);
+if(pm)SESSION_ID=pm[1];
+
+function show(which){['loading','empty','error'].forEach(s=>$(s).classList.toggle('on',s===which));$('appMain').style.display=which?'none':'flex';}
+
+async function load(){
+  show('loading');
+  try{
+    const url=SESSION_ID?`/api/sessions/${SESSION_ID}`:`/api/sessions/current`;
+    const res=await fetch(url,{cache:'no-store'});
+    if(res.status===404||res.status===204){show('empty');return;}
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const body=await res.text();
+    if(!body){show('empty');return;}
+    SESSION=JSON.parse(body);
+    if(SESSION&&SESSION.error){show('empty');return;}
+    SESSION_ID=SESSION.id;FILES=SESSION.files||[];
+    if(!FILES.length){show('empty');return;}
+    verdicts=new Array(FILES.length).fill(null);cur=0;
+    $('hPath').textContent=shortRepo(SESSION.repo||SESSION.repoName);
+    if(SESSION.model){$('hModel').textContent=SESSION.model;$('hDot').style.display='';$('hModel').style.display='';}
+    else{$('hDot').style.display='none';$('hModel').style.display='none';}
+    show(null);
+    if(SESSION.status==='submitted'){showAlreadyDone();return;}
+    render();
+  }catch(e){$('errMsg').textContent=String(e&&e.message||e);show('error');}
+}
+$('emptyRetry').onclick=load;$('errRetry').onclick=load;
+
+function renderDiff(f){
+  let h='';
+  (f.hunks||[]).forEach(hk=>{
+    h+=`<div class="hunk">${escapeHtml(hk.header)}</div>`;
+    (hk.lines||[]).forEach(l=>{
+      const cls=l.type==='plus'?'plus':l.type==='minus'?'minus':'';
+      const sign=l.type==='plus'?'+':l.type==='minus'?'-':' ';
+      h+=`<div class="ln ${cls}"><span class="g">${escapeHtml(l.gutter)}</span><span class="c">${sign} ${escapeHtml(l.content)}</span></div>`;
+    });
+  });
+  if(f.note)h+=`<div class="hunk" style="color:var(--txt3);background:rgba(255,255,255,.03)">${escapeHtml(f.note)}</div>`;
+  if(!h)h=`<div class="hunk" style="color:var(--txt3);background:none">no line changes</div>`;
+  return h;
+}
+function buildRail(){
+  const r=$('rail');r.innerHTML='';
+  FILES.forEach((f,i)=>{const t=vtype(verdicts[i]);const c=document.createElement('div');
+    c.className='chipf'+(i===cur?' cur':'')+(t?' '+(t==='ok'?'ok':'flag'):'');c.dataset.i=i;
+    const short=f.name.length>18?'…'+f.name.slice(-16):f.name;
+    c.innerHTML=`<span class="d"></span>${escapeHtml(short)}`;c.onclick=()=>{cur=i;render();};r.appendChild(c);});
+  const ce=r.querySelector('.chipf.cur');if(ce)ce.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+}
+function render(){
+  const f=FILES[cur];$('vFn').textContent=f.name;$('vAdd').textContent='+'+f.add;$('vDel').textContent='−'+f.del;
+  $('code').innerHTML=renderDiff(f);$('code').scrollTop=0;
+  const t=vtype(verdicts[cur]);const b=$('vBadge');
+  if(t==='ok'){b.className='vbadge ok';b.textContent='✓ approved';}
+  else if(t==='flag'){b.className='vbadge flag';b.textContent='⚑ flagged';}
+  else{b.className='vbadge pending';b.textContent='pending';}
+  const ns=$('noteStrip');if(t==='flag'){ns.classList.add('on');$('noteText').textContent='"'+vnote(verdicts[cur])+'"';}else ns.classList.remove('on');
+  $('counter').textContent=`${cur+1} / ${FILES.length}`;
+  $('prev').classList.toggle('hide',cur===0);$('next').classList.toggle('hide',cur===FILES.length-1);
+  const done=verdicts.filter(v=>vtype(v)).length;$('prog').textContent=`${done}/${FILES.length}`;
+  updateDock(done);buildRail();
+}
+function updateDock(done){
+  const allDone=done===FILES.length&&FILES.length>0;
+  $('flag').style.display=allDone?'none':'';
+  $('ok').style.display=allDone?'none':'';
+  $('sendInline').style.display=allDone?'':'none';
+}
+function nextUnreviewed(){if(verdicts.every(v=>vtype(v))){render();return;}let n=cur+1;while(n<FILES.length&&vtype(verdicts[n]))n++;if(n>=FILES.length)n=verdicts.findIndex(v=>!vtype(v));cur=n;render();}
+function markOk(){verdicts[cur]='ok';render();setTimeout(nextUnreviewed,220);}
+$('ok').onclick=markOk;$('flag').onclick=()=>openFlag(cur);
+$('sendInline').onclick=showDone;
+$('prev').onclick=()=>{cur=Math.max(0,cur-1);render();};
+$('next').onclick=()=>{cur=Math.min(FILES.length-1,cur+1);render();};
+
+/* swipe — right=approve, left=flag. Guard the left screen edge so it doesn't fight Safari's back-swipe. */
+const viewer=$('viewer');let sx=0,sy=0,drag=false,ax=null;
+viewer.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('on'))return;if(e.clientX<24){drag=false;return;}drag=true;sx=e.clientX;sy=e.clientY;ax=null;});
+viewer.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-sx,dy=e.clientY-sy;if(!ax&&(Math.abs(dx)>10||Math.abs(dy)>10))ax=Math.abs(dx)>Math.abs(dy)?'x':'y';if(ax==='x'){e.preventDefault();const r=Math.min(Math.abs(dx)/120,1);if(dx>0){$('fxOk').style.opacity=r;$('fxNo').style.opacity=0;}else{$('fxNo').style.opacity=r;$('fxOk').style.opacity=0;}}},{passive:false});
+viewer.addEventListener('pointerup',e=>{if(!drag)return;drag=false;const dx=e.clientX-sx;$('fxOk').style.opacity=0;$('fxNo').style.opacity=0;if(ax==='x'){if(dx>110)markOk();else if(dx<-110)openFlag(cur);}});
+
+/* flag sheet — manual prompt, no preset chips */
+const sheetWrap=$('sheetWrap');let flagIdx=null;
+function openFlag(i){flagIdx=i;$('sheetFile').textContent=FILES[i].name;$('note').value='';sheetWrap.classList.add('on');setTimeout(()=>$('note').focus(),320);}
+function closeFlag(){sheetWrap.classList.remove('on');$('note').blur();}
+$('scrim').onclick=closeFlag;$('cancelFlag').onclick=closeFlag;
+$('saveFlag').onclick=()=>{const note=$('note').value.trim()||'flagged for rework';verdicts[flagIdx]={v:'flag',note};closeFlag();cur=flagIdx;render();setTimeout(nextUnreviewed,220);};
+
+/* done summary */
+function showDone(){
+  const flag=[],ok=[];verdicts.forEach((v,i)=>{const t=vtype(v);if(t==='flag')flag.push({...FILES[i],note:vnote(v)});else if(t==='ok')ok.push(FILES[i]);});
+  $('doneSummary').textContent=`${ok.length+flag.length} files reviewed · ${flag.length} flagged`;let h='';
+  if(flag.length){h+=`<div class="grp-label">⚑ ${flag.length} flagged — caveats to Codex</div>`;flag.forEach(f=>{h+=`<div class="srow flag"><div class="si">⚑</div><div style="min-width:0;flex:1"><div class="f">${escapeHtml(f.name)}</div><div class="note">"${escapeHtml(f.note)}"</div></div></div>`;});}
+  h+=`<div class="grp-label">✓ ${ok.length} approved</div>`;ok.forEach(f=>{h+=`<div class="srow ok"><div class="si">✓</div><div style="min-width:0;flex:1"><div class="f">${escapeHtml(f.name)}</div><div class="note">+${f.add} −${f.del}</div></div></div>`;});
+  $('summary').innerHTML=h;$('done').classList.add('on');
+}
+$('backReview').onclick=()=>$('done').classList.remove('on');
+function showAlreadyDone(){
+  const v=SESSION.verdict;if(!v){render();return;}
+  $('awaitMsg').textContent=`Already reviewed — ${v.approved} approved, ${v.flagged} flagged. Codex has the verdict.`;
+  ['st1','st2','st3','st4'].forEach(id=>{$(id).className='step done';$(id).querySelector('.sd').textContent='✓';});
+  $('await').classList.add('on');
+}
+
+/* SEND — the real POST */
+$('sendBtn').onclick=async()=>{
+  const btn=$('sendBtn');btn.classList.add('busy');btn.textContent='Sending…';
+  const files=FILES.map((f,i)=>{const t=vtype(verdicts[i]);return{path:f.path,verdict:t==='flag'?'flag':'approve',note:t==='flag'?vnote(verdicts[i]):null};});
+  try{
+    const res=await fetch(`/api/sessions/${SESSION_ID}/verdict`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files})});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();const v=data.verdict;
+    $('done').classList.remove('on');
+    $('awaitMsg').textContent=v.flagged?`${v.flagged} flagged, ${v.approved} approved. Codex is reworking the flagged files with your notes.`:`All ${v.approved} files approved. Codex is wrapping up.`;
+    $('await').classList.add('on');
+    setTimeout(()=>{setStep('st2','done');setStep('st3','active');},1500);
+    setTimeout(()=>{setStep('st3','done');setStep('st4','active');},3000);
+    setTimeout(()=>setStep('st4','done'),4300);
+  }catch(e){btn.classList.remove('busy');btn.innerHTML='Retry send';alert('Send failed: '+(e.message||e));}
+};
+function setStep(id,s){const el=$(id);el.className='step '+s;if(s==='done')el.querySelector('.sd').textContent='✓';}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# deps / build
+node_modules/
+bun.lock
+*.tsbuildinfo
+
+# local data (sqlite lives in a docker volume in prod, ./data only in local dev)
+data/
+*.db
+*.sqlite
+
+# os
+.DS_Store
+
+# internal-only working docs (infra-specific, not for publishing)
+docs/MASTER-PRD.md
+
+# design exploration scratch (kept local)
+design-catalogue/

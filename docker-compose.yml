@@ -1,0 +1,24 @@
+# Codex Mobile Review — server container for the mini (OrbStack).
+# Published to 127.0.0.1 only; the tailnet reaches it via `tailscale serve --https=7443`.
+services:
+  server:
+    build: .
+    image: codex-review-server:latest
+    container_name: codex-review-server
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7799:7799"
+    volumes:
+      - codex-review-data:/data
+    environment:
+      - PORT=7799
+      - CODEX_REVIEW_DB=/data/sessions.db
+      - CODEX_REVIEW_WEB_DIR=/app/web
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:7799/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  codex-review-data:

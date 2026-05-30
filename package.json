@@ -1,0 +1,21 @@
+{
+  "name": "codex-review",
+  "version": "1.0.0",
+  "type": "module",
+  "module": "src/server.ts",
+  "private": true,
+  "bin": {
+    "codex-review": "./bin/codex-review"
+  },
+  "scripts": {
+    "serve": "bun run src/cli.ts serve",
+    "dev": "bun --watch run src/cli.ts serve",
+    "cli": "bun run src/cli.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

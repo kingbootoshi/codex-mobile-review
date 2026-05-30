@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Resolve symlinks so this works when linked into /opt/homebrew/bin etc.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+
+# Optional host config (e.g. the Tailscale public URL on the mini).
+[ -f "$HOME/.config/codex-review/env" ] && . "$HOME/.config/codex-review/env"
+
+exec bun "$DIR/../src/cli.ts" "$@"
